@@ -96,18 +96,25 @@
       </main>
     </div>
 
-    <!-- Sidecar & Linking Diagnostics Modal -->
+    <!-- Pure-Rust Signal QR Device Linking & Status Modal -->
     <div id="sidecar-modal" class="modal-backdrop hidden">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>Rust Backend &amp; Sidecar Status</h3>
+          <h3>Link Device with Signal (Pure Rust)</h3>
           <button id="btn-close-modal" class="icon-btn">✕</button>
         </header>
         <div class="modal-body">
-          <pre id="sidecar-info" class="code-box">Loading...</pre>
+          <div id="qr-section" class="qr-section">
+            <div id="qr-box" class="qr-box">
+              <span class="qr-placeholder">Click "Generate QR Code" to link this Raspberry Pi as a Signal device.</span>
+            </div>
+            <p id="qr-hint" class="qr-hint">
+              On your phone: open <strong>Signal → Settings → Linked Devices → Link New Device</strong> and scan the QR code.
+            </p>
+          </div>
+          <pre id="sidecar-info" class="code-box">Loading status...</pre>
           <div class="modal-actions">
-            <button id="btn-ping-sidecar" class="pill-btn">Ping Sidecar</button>
-            <button id="btn-link-preview" class="pill-btn">Test QR Link URI</button>
+            <button id="btn-link-qr" class="send-btn" style="padding: 7px 14px;">Generate QR Code</button>
             <button id="btn-wal-checkpoint" class="pill-btn">WAL Checkpoint</button>
           </div>
         </div>

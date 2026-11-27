@@ -6,6 +6,7 @@ pub mod config;
 pub mod ipc;
 pub mod logging;
 pub mod sidecar;
+pub mod signal_client;
 pub mod sql;
 pub mod tray;
 
@@ -13,6 +14,7 @@ use attachments::{AttachmentStore, ATTACHMENTS_DIR, AVATARS_DIR, BADGES_DIR, DRA
 use config::{resolve_user_data_dir, ConfigStore};
 use logging::LogSink;
 use sidecar::{resolve_sidecar_script, SidecarManager};
+use signal_client::SignalClient;
 use sql::SqlEngine;
 use std::sync::Arc;
 use tauri::{http::Response, Emitter, Manager};
@@ -23,6 +25,7 @@ pub struct AppState {
     pub sql: Arc<SqlEngine>,
     pub attachments: Arc<AttachmentStore>,
     pub sidecar: Arc<SidecarManager>,
+    pub signal: Arc<SignalClient>,
     pub logs: Arc<LogSink>,
 }
 
@@ -136,19 +139,31 @@ pub fn run() {
                 user_data_dir.clone(),
             ));
 
-            // Forward asynchronous sidecar events (incoming messages, QR codes, sync) to UI
-            let handle = app.handle().clone();
+            let handle_sidecar = app.handle().clone();
             sidecar.set_event_callback(Arc::new(move |event_name, payload| {
-                if let Err(err) = handle.emit(event_name, payload) {
+                if let Err(err) = handle_sidecar.emit(event_name, payload) {
                     error!("Failed to emit sidecar event '{event_name}': {err}");
                 }
             }));
+
+            // Spawn pure-Rust Signal protocol engine (presage)
+            let handle_signal = app.handle().clone();
+            let signal = Arc::new(SignalClient::spawn(
+                user_data_dir.clone(),
+                sql_key,
+                Arc::new(move |event_name, payload| {
+                    if let Err(err) = handle_signal.emit(event_name, payload) {
+                        error!("Failed to emit Signal event '{event_name}': {err}");
+                    }
+                }),
+            ));
 
             let state = AppState {
                 config,
                 sql,
                 attachments: Arc::clone(&attachments_for_protocol),
                 sidecar,
+                signal,
                 logs,
             };
 
@@ -198,6 +213,10 @@ pub fn run() {
             ipc::delete_all_logs,
             ipc::sidecar_invoke,
             ipc::sidecar_status,
+            ipc::signal_status,
+            ipc::signal_start_linking,
+            ipc::signal_send_message,
+            ipc::signal_list_threads,
         ]);
 
     builder

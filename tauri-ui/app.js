@@ -433,29 +433,119 @@ async function loadConversations() {
   }
 }
 
-async function refreshSidecarModal() {
+async function refreshSignalModal() {
   try {
-    const [status, caps, msgStatus] = await Promise.all([
-      invoke('sidecar_status'),
-      invoke('sidecar_invoke', { method: 'capabilities', params: {} }),
-      invoke('sidecar_invoke', { method: 'messaging.status', params: {} }),
-    ]);
-    els.sidecarDot.className = 'status-dot ok';
+    const st = await invoke('signal_status');
+    els.sidecarDot.className = st.linked ? 'status-dot ok' : 'status-dot warn';
+
+    const qrBox = document.getElementById('qr-box');
+    const qrHint = document.getElementById('qr-hint');
+    if (st.linked) {
+      qrBox.innerHTML = `<span class="qr-placeholder" style="color:#188038;font-weight:600;">✓ Linked to Signal<br/>${st.phone || st.aci || ''}</span>`;
+      qrHint.textContent =
+        'This Raspberry Pi is linked via pure-Rust Signal (presage). Messages you send will sync across your devices.';
+    } else if (st.qrSvg) {
+      qrBox.innerHTML = st.qrSvg;
+      qrHint.innerHTML =
+        'Scan this QR code in <strong>Signal → Settings → Linked Devices → Link New Device</strong>.';
+    } else if (st.linking) {
+      qrBox.innerHTML =
+        '<span class="qr-placeholder">Connecting to Signal servers to fetch QR code...</span>';
+    }
+
     els.sidecarInfo.textContent = JSON.stringify(
       {
-        backend: state.config?.backend || 'rust-tauri-v2',
+        backend: 'pure-rust-presage',
+        linked: st.linked,
+        linking: st.linking,
+        aci: st.aci,
+        phone: st.phone,
+        deviceName: st.deviceName,
+        lastError: st.lastError,
         userDataPath: state.config?.userDataPath,
-        sidecar: status,
-        capabilities: caps,
-        messaging: msgStatus,
       },
       null,
       2
     );
   } catch (err) {
     els.sidecarDot.className = 'status-dot warn';
-    els.sidecarInfo.textContent = `Sidecar unavailable: ${err}`;
+    els.sidecarInfo.textContent = `Signal engine status error: ${err}`;
   }
+}
+
+async function startQrLinking() {
+  const qrBox = document.getElementById('qr-box');
+  qrBox.innerHTML =
+    '<span class="qr-placeholder">Requesting real Signal linking QR code...</span>';
+  try {
+    await invoke('signal_start_linking', { deviceName: 'Signal-Pi4' });
+    await refreshSignalModal();
+  } catch (err) {
+    qrBox.innerHTML = `<span class="qr-placeholder" style="color:#d93025;">Linking failed: ${err}</span>`;
+    els.sidecarInfo.textContent = String(err);
+  }
+}
+
+function setupSignalEventListeners() {
+  const listen = window.__TAURI__?.event?.listen;
+  if (!listen) return;
+
+  void listen('signal:qr', ev => {
+    const payload = ev.payload || {};
+    const qrBox = document.getElementById('qr-box');
+    if (payload.svg && qrBox) {
+      qrBox.innerHTML = payload.svg;
+    }
+    void refreshSignalModal();
+  });
+
+  void listen('signal:linked', () => {
+    els.sidecarDot.className = 'status-dot ok';
+    void refreshSignalModal();
+    void loadConversations();
+  });
+
+  void listen('signal:link-error', ev => {
+    const err = ev.payload?.error || 'Unknown linking error';
+    const qrBox = document.getElementById('qr-box');
+    if (qrBox) {
+      qrBox.innerHTML = `<span class="qr-placeholder" style="color:#d93025;">${err}</span>`;
+    }
+    void refreshSignalModal();
+  });
+
+  void listen('signal:live-message', ev => {
+    const m = ev.payload || {};
+    const activeConv = state.convById.get(state.activeConvId);
+    if (!activeConv) return;
+
+    const matchesDirect =
+      activeConv.type !== 'group' &&
+      ((m.senderServiceId &&
+        String(activeConv.serviceId || '').includes(m.senderServiceId)) ||
+        (m.destinationServiceId &&
+          String(activeConv.serviceId || '').includes(m.destinationServiceId)) ||
+        (m.destinationE164 && activeConv.e164 === m.destinationE164));
+
+    const matchesGroup =
+      activeConv.type === 'group' &&
+      m.groupMasterKey &&
+      (activeConv.masterKey === m.groupMasterKey ||
+        activeConv.groupMasterKey === m.groupMasterKey);
+
+    if (matchesDirect || matchesGroup) {
+      state.activeMessages.push({
+        id: `live-${m.timestamp || Date.now()}`,
+        conversationId: state.activeConvId,
+        type: m.direction === 'outgoing' ? 'outgoing' : 'incoming',
+        body: m.body,
+        sent_at: m.timestamp || Date.now(),
+        received_at: m.timestamp || Date.now(),
+        sourceServiceId: m.senderServiceId,
+      });
+      renderMessages(true);
+    }
+  });
 }
 
 function applyTheme(theme) {
@@ -475,6 +565,8 @@ async function init() {
     console.warn('get_config failed:', err);
   }
 
+  setupSignalEventListeners();
+
   document.getElementById('btn-refresh').onclick = () => loadConversations();
   document.getElementById('btn-theme').onclick = async () => {
     const cur = document.documentElement.getAttribute('data-theme');
@@ -487,24 +579,13 @@ async function init() {
   };
   document.getElementById('btn-sidecar').onclick = () => {
     els.sidecarModal.classList.remove('hidden');
-    void refreshSidecarModal();
+    void refreshSignalModal();
   };
   document.getElementById('btn-close-modal').onclick = () => {
     els.sidecarModal.classList.add('hidden');
   };
-  document.getElementById('btn-ping-sidecar').onclick = async () => {
-    const res = await invoke('sidecar_invoke', {
-      method: 'ping',
-      params: { echo: 'rpi4-ui' },
-    });
-    els.sidecarInfo.textContent = JSON.stringify(res, null, 2);
-  };
-  document.getElementById('btn-link-preview').onclick = async () => {
-    const res = await invoke('sidecar_invoke', {
-      method: 'linking.start',
-      params: { offlinePreview: true },
-    });
-    els.sidecarInfo.textContent = JSON.stringify(res, null, 2);
+  document.getElementById('btn-link-qr').onclick = () => {
+    void startQrLinking();
   };
   document.getElementById('btn-wal-checkpoint').onclick = async () => {
     const res = await sqlWrite('walCheckpoint');
@@ -521,6 +602,20 @@ async function init() {
     e.preventDefault();
     const text = els.composerInput.value.trim();
     if (!text || !state.activeConvId) return;
+
+    const conv = state.convById.get(state.activeConvId);
+    const st = await invoke('signal_status');
+    if (!st.linked) {
+      els.sidecarModal.classList.remove('hidden');
+      void startQrLinking();
+      return;
+    }
+
+    const isGroup = conv?.type === 'group';
+    const recipientId = isGroup
+      ? conv.masterKey || conv.groupMasterKey || conv.groupId || conv.id
+      : conv?.serviceId || conv?.uuid || conv?.id;
+
     els.composerInput.value = '';
     const now = Date.now();
     const msg = {
@@ -533,6 +628,17 @@ async function init() {
     };
     state.activeMessages.push(msg);
     renderMessages(true);
+
+    try {
+      await invoke('signal_send_message', {
+        recipientType: isGroup ? 'group' : 'contact',
+        recipientId: String(recipientId),
+        body: text,
+      });
+    } catch (err) {
+      msg.body = `${text}\n[Send failed: ${err}]`;
+      renderMessages(true);
+    }
   };
 
   els.composerInput.onkeydown = e => {
@@ -544,14 +650,17 @@ async function init() {
 
   await loadConversations();
 
-  // Check sidecar health asynchronously without blocking initial paint
-  void invoke('sidecar_invoke', { method: 'ping', params: { echo: 'boot' } })
-    .then(() => {
-      els.sidecarDot.className = 'status-dot ok';
-    })
-    .catch(() => {
-      els.sidecarDot.className = 'status-dot warn';
-    });
+  // Check pure-Rust Signal link status on boot; auto-open QR modal if not linked yet
+  try {
+    const st = await invoke('signal_status');
+    els.sidecarDot.className = st.linked ? 'status-dot ok' : 'status-dot warn';
+    if (!st.linked) {
+      els.sidecarModal.classList.remove('hidden');
+      void startQrLinking();
+    }
+  } catch {
+    els.sidecarDot.className = 'status-dot warn';
+  }
 }
 
 void init();

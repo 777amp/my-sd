@@ -1,11 +1,11 @@
 [package]
 name = "signal-desktop-rs"
 version = "8.39.0"
-description = "Signal Desktop Tauri v2 Rust backend optimized for Raspberry Pi 4B (ARM64) & Linux"
+description = "Signal Desktop Tauri v2 pure-Rust backend (presage + SQLCipher) optimized for Raspberry Pi 4B (ARM64) & Linux"
 authors = ["Signal Messenger, LLC", "777amp"]
 license = "AGPL-3.0-only"
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.85"
 
 [lib]
 name = "signal_desktop_rs_lib"
@@ -25,8 +25,15 @@ tauri-plugin-notification = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-shell = "2"
 
-# SQLCipher (compatible with Signal Desktop's ~/.config/Signal/sql/db.sqlite)
-rusqlite = { version = "0.32", features = ["bundled-sqlcipher", "serde_json", "backup"] }
+# Pure-Rust Signal Protocol (PQXDH, linking, E2EE send/receive, multi-device sync)
+presage = { git = "https://github.com/whisperfish/presage", rev = "4309bd23539b0bcaa022f5a97776ba50f2f23936" }
+presage-store-sqlite = { git = "https://github.com/whisperfish/presage", rev = "4309bd23539b0bcaa022f5a97776ba50f2f23936" }
+qrcode = "0.14"
+futures = "0.3"
+uuid = { version = "1", features = ["serde"] }
+
+# SQLCipher (matches presage-store-sqlite's libsqlite3-sys 0.36.0 for reading legacy Signal Desktop db.sqlite)
+rusqlite = { git = "https://github.com/whisperfish/rusqlite", rev = "2a42b3354c9194700d08aa070f70a131a470e7dc", features = ["bundled-sqlcipher", "serde_json", "backup"] }
 
 # Async runtime & serialization
 tokio = { version = "1", features = ["full"] }
@@ -62,6 +69,14 @@ secret-service = { version = "4", features = ["rt-tokio-crypto-rust"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+# Required by presage / libsignal (unoptimized ML-KEM can stack-overflow during PQXDH)
+[profile.dev.package.libcrux-ml-kem]
+opt-level = 3
+
+[patch.crates-io]
+quickcheck_async = { git = "https://github.com/nytopop/quickcheck_async", rev = "76b13525ca93e0725e757f841fc6ccab8bae1913" }
+libsqlite3-sys = { version = "0.36.0", git = "https://github.com/whisperfish/rusqlite", rev = "2a42b3354c9194700d08aa070f70a131a470e7dc" }
 
 [profile.release]
 # Optimized for Raspberry Pi 4B (ARM64) size and runtime performance

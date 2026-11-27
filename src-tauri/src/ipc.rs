@@ -437,3 +437,50 @@ pub async fn sidecar_status(state: State<'_, AppState>) -> Result<Value, String>
         "running": state.sidecar.is_running().await,
     }))
 }
+
+// ---------------------------------------------------------------------------
+// Pure-Rust Signal Protocol (presage) — QR Linking & E2EE Messaging
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn signal_status(state: State<'_, AppState>) -> crate::signal_client::SignalStatus {
+    state.signal.status()
+}
+
+#[tauri::command]
+pub async fn signal_start_linking(
+    state: State<'_, AppState>,
+    device_name: Option<String>,
+) -> Result<(), String> {
+    let name = device_name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "Signal-Pi4".to_string());
+    state
+        .signal
+        .start_linking(name)
+        .await
+        .map_err(|e| format!("{e:#}"))
+}
+
+#[tauri::command]
+pub async fn signal_send_message(
+    state: State<'_, AppState>,
+    recipient_type: String,
+    recipient_id: String,
+    body: String,
+) -> Result<Value, String> {
+    state
+        .signal
+        .send_message(recipient_type, recipient_id, body)
+        .await
+        .map_err(|e| format!("{e:#}"))
+}
+
+#[tauri::command]
+pub async fn signal_list_threads(state: State<'_, AppState>) -> Result<Value, String> {
+    state
+        .signal
+        .list_contacts_and_groups()
+        .await
+        .map_err(|e| format!("{e:#}"))
+}

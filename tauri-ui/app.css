@@ -549,3 +549,48 @@ body {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-box {
+  width: 268px;
+  height: 268px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1b1d22;
+  text-align: center;
+}
+
+.qr-box svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qr-placeholder {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #444;
+}
+
+.qr-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.msg-status-err {
+  color: #ff9c9c;
+  font-size: 11px;
+  margin-top: 3px;
+}
+

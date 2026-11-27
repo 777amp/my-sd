@@ -38,6 +38,10 @@ jobs:
             pkg-config \
             patchelf \
             build-essential \
+            protobuf-compiler \
+            libprotobuf-dev \
+            cmake \
+            clang \
             python3 \
             fakeroot \
             dpkg

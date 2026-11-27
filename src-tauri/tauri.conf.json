@@ -51,8 +51,7 @@
           "libgtk-3-0",
           "libayatana-appindicator3-1",
           "libasound2 | libasound2t64",
-          "libsecret-1-0",
-          "nodejs"
+          "libsecret-1-0"
         ],
         "section": "net",
         "priority": "optional",
