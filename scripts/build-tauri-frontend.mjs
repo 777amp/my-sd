@@ -17,6 +17,11 @@ const distDir = path.join(rootDir, 'dist-tauri');
 fs.rmSync(distDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 
+const tauriUiDir = path.join(rootDir, 'tauri-ui');
+if (fs.existsSync(tauriUiDir)) {
+  fs.cpSync(tauriUiDir, distDir, { recursive: true });
+}
+
 const filesToCopy = [
   'background.html',
   'about.html',

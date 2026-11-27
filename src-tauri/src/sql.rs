@@ -197,13 +197,13 @@ impl SqlEngine {
                 let conv_id = args.first().and_then(|v| v.as_str());
                 let count: i64 = if let Some(cid) = conv_id {
                     conn.query_row(
-                        "SELECT COUNT(*) FROM messages WHERE conversationId = ?1 AND unread = 1",
+                        "SELECT COUNT(*) FROM messages WHERE conversationId = ?1 AND json_extract(json, '$.unread') = 1",
                         params![cid],
                         |r| r.get(0),
                     )?
                 } else {
                     conn.query_row(
-                        "SELECT COUNT(*) FROM messages WHERE unread = 1",
+                        "SELECT COUNT(*) FROM messages WHERE json_extract(json, '$.unread') = 1",
                         [],
                         |r| r.get(0),
                     )?
