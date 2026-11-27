@@ -594,3 +594,89 @@ body {
   margin-top: 3px;
 }
 
+/* Collapsible Sidebar */
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+  overflow: hidden;
+  border-right: none;
+  visibility: hidden;
+}
+
+/* Selectable message text & Show more/less button */
+.msg-bubble {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.expand-toggle-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-theme='light'] .msg-row.incoming .expand-toggle-btn {
+  border-color: rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.expand-toggle-btn:hover {
+  opacity: 0.9;
+}
+
+/* Right-Click Context Menu */
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+/* Subtle Copy Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 250;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+

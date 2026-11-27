@@ -31,17 +31,22 @@ async function sqlWrite(callName, args = []) {
   return res.value;
 }
 
+const LONG_TEXT_CHAR_LIMIT = 500;
+const LONG_TEXT_LINE_LIMIT = 10;
+
 const state = {
   conversations: [],
   convById: new Map(),
   activeConvId: null,
   activeMessages: [],
+  expandedMessages: new Set(),
   oldestTimestamp: null,
   searchTerm: '',
   config: null,
 };
 
 const els = {
+  appShell: document.getElementById('app'),
   convList: document.getElementById('conversation-list'),
   msgList: document.getElementById('message-list'),
   chatTitle: document.getElementById('chat-title'),
@@ -56,6 +61,8 @@ const els = {
   sidecarDot: document.getElementById('sidecar-dot'),
   sidecarModal: document.getElementById('sidecar-modal'),
   sidecarInfo: document.getElementById('sidecar-info'),
+  contextMenu: document.getElementById('context-menu'),
+  toast: document.getElementById('toast'),
 };
 
 const AVATAR_COLORS = [
@@ -284,11 +291,33 @@ function renderMessageElement(msg, isGroup) {
     (msg.call_history ? '[Call]' : '') ||
     (!msg.attachments?.length ? `[${type || 'event'}]` : '');
 
+  const msgKey = String(msg.id || msg.sent_at || msg.received_at || '');
+  const collapsible = isLongText(text);
+  const expanded = state.expandedMessages.has(msgKey);
+
   if (text) {
     const textNode = document.createElement('div');
-    textNode.textContent = text;
+    textNode.className = 'msg-text';
+    textNode.textContent = collapsible && !expanded ? truncateText(text) : text;
     bubble.appendChild(textNode);
+
+    if (collapsible) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'expand-toggle-btn';
+      toggleBtn.textContent = expanded ? 'Show less' : 'Show more';
+      toggleBtn.onclick = ev => {
+        ev.stopPropagation();
+        toggleMessageExpanded(msgKey);
+      };
+      bubble.appendChild(toggleBtn);
+    }
   }
+
+  bubble.addEventListener('contextmenu', ev => {
+    ev.preventDefault();
+    showMessageContextMenu(ev, msg, text, msgKey, collapsible);
+  });
 
   const meta = document.createElement('div');
   meta.className = 'msg-meta';
@@ -548,6 +577,145 @@ function setupSignalEventListeners() {
   });
 }
 
+let toastTimer = null;
+
+function showToast(message) {
+  if (!els.toast) return;
+  els.toast.textContent = message;
+  els.toast.classList.remove('hidden');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    els.toast.classList.add('hidden');
+  }, 1800);
+}
+
+async function copyToClipboard(text) {
+  if (!text) return;
+  try {
+    await invoke('clipboard_write_text', { text });
+    showToast('Copied to clipboard');
+    return;
+  } catch {
+    // fallback to browser clipboard API
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copied to clipboard');
+  } catch (err) {
+    showToast(`Copy failed: ${err}`);
+  }
+}
+
+function isLongText(text) {
+  if (!text) return false;
+  if (text.length > LONG_TEXT_CHAR_LIMIT) return true;
+  return text.split('\n').length > LONG_TEXT_LINE_LIMIT;
+}
+
+function truncateText(text) {
+  const lines = text.split('\n');
+  let out =
+    lines.length > LONG_TEXT_LINE_LIMIT
+      ? lines.slice(0, LONG_TEXT_LINE_LIMIT).join('\n')
+      : text;
+  if (out.length > LONG_TEXT_CHAR_LIMIT) {
+    out = out.slice(0, LONG_TEXT_CHAR_LIMIT).trimEnd();
+  }
+  return `${out}…`;
+}
+
+function toggleMessageExpanded(msgKey) {
+  if (state.expandedMessages.has(msgKey)) {
+    state.expandedMessages.delete(msgKey);
+  } else {
+    state.expandedMessages.add(msgKey);
+  }
+  const prevScroll = els.msgList.scrollTop;
+  renderMessages(false);
+  els.msgList.scrollTop = prevScroll;
+}
+
+function hideContextMenu() {
+  if (els.contextMenu) {
+    els.contextMenu.classList.add('hidden');
+  }
+}
+
+function showMessageContextMenu(ev, msg, fullText, msgKey, collapsible) {
+  const menu = els.contextMenu;
+  if (!menu) return;
+  menu.textContent = '';
+
+  const selected = String(window.getSelection?.()?.toString() || '').trim();
+  const items = [];
+
+  if (selected) {
+    items.push({
+      label: 'Copy selected text',
+      action: () => copyToClipboard(selected),
+    });
+  }
+
+  if (fullText) {
+    items.push({
+      label: 'Copy message',
+      action: () => copyToClipboard(fullText),
+    });
+  }
+
+  const ts = msg.sent_at || msg.received_at || msg.timestamp;
+  if (ts) {
+    items.push({
+      label: 'Copy timestamp',
+      action: () => copyToClipboard(new Date(ts).toLocaleString()),
+    });
+  }
+
+  if (collapsible) {
+    const expanded = state.expandedMessages.has(msgKey);
+    items.push({
+      label: expanded ? 'Collapse message' : 'Expand message',
+      action: () => toggleMessageExpanded(msgKey),
+    });
+  }
+
+  if (items.length === 0) return;
+
+  for (const item of items) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'context-menu-item';
+    btn.textContent = item.label;
+    btn.onclick = () => {
+      hideContextMenu();
+      void item.action();
+    };
+    menu.appendChild(btn);
+  }
+
+  menu.classList.remove('hidden');
+  const rect = menu.getBoundingClientRect();
+  const x = Math.min(ev.clientX, window.innerWidth - rect.width - 8);
+  const y = Math.min(ev.clientY, window.innerHeight - rect.height - 8);
+  menu.style.left = `${Math.max(8, x)}px`;
+  menu.style.top = `${Math.max(8, y)}px`;
+}
+
+function setSidebarCollapsed(collapsed) {
+  if (!els.appShell) return;
+  els.appShell.classList.toggle('sidebar-collapsed', collapsed);
+  try {
+    localStorage.setItem('signal_sidebar_collapsed', collapsed ? '1' : '0');
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function toggleSidebar() {
+  const collapsed = !els.appShell?.classList.contains('sidebar-collapsed');
+  setSidebarCollapsed(collapsed);
+}
+
 function applyTheme(theme) {
   const next = theme === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
@@ -565,7 +733,31 @@ async function init() {
     console.warn('get_config failed:', err);
   }
 
+  try {
+    if (localStorage.getItem('signal_sidebar_collapsed') === '1') {
+      setSidebarCollapsed(true);
+    }
+  } catch {
+    // ignore
+  }
+
   setupSignalEventListeners();
+
+  document.getElementById('btn-toggle-sidebar').onclick = () => toggleSidebar();
+  document.addEventListener('keydown', ev => {
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'b') {
+      ev.preventDefault();
+      toggleSidebar();
+    } else if (ev.key === 'Escape') {
+      hideContextMenu();
+    }
+  });
+  document.addEventListener('click', ev => {
+    if (!els.contextMenu?.contains(ev.target)) {
+      hideContextMenu();
+    }
+  });
+  els.msgList.addEventListener('scroll', () => hideContextMenu());
 
   document.getElementById('btn-refresh').onclick = () => loadConversations();
   document.getElementById('btn-theme').onclick = async () => {
