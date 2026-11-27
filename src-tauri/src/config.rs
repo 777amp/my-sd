@@ -321,6 +321,7 @@ fn load_merged_app_config(resource_dir: Option<&Path>) -> Value {
 
     let candidates = [
         resource_dir.map(|d| d.join("config")),
+        resource_dir.map(|d| d.join("_up_").join("config")),
         Some(PathBuf::from("config")),
         Some(PathBuf::from("../config")),
     ];

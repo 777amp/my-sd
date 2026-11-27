@@ -120,39 +120,46 @@ impl SqlEngine {
             }
             "getConversationById" => {
                 let id = arg_str(args, 0)?;
-                query_json_column_by_id(conn, "SELECT json FROM conversations WHERE id = ?1", id)
+                query_hydrated_one(conn, "SELECT * FROM conversations WHERE id = ?1", params![id], false)
             }
             "getConversationByE164" => {
                 let e164 = arg_str(args, 0)?;
-                query_json_column_by_id(conn, "SELECT json FROM conversations WHERE e164 = ?1", e164)
+                query_hydrated_one(conn, "SELECT * FROM conversations WHERE e164 = ?1", params![e164], false)
             }
             "getConversationByServiceId" => {
                 let service_id = arg_str(args, 0)?;
-                query_json_column_by_id(
+                query_hydrated_one(
                     conn,
-                    "SELECT json FROM conversations WHERE serviceId = ?1",
-                    service_id,
+                    "SELECT * FROM conversations WHERE serviceId = ?1",
+                    params![service_id],
+                    false,
                 )
             }
-            "getAllConversations" => {
-                query_json_column_all(conn, "SELECT json FROM conversations ORDER BY active_at DESC")
-            }
-            "getAllGroups" => query_json_column_all(
+            "getAllConversations" => query_hydrated_all(
                 conn,
-                "SELECT json FROM conversations WHERE type = 'group' ORDER BY active_at DESC",
+                "SELECT * FROM conversations ORDER BY active_at DESC",
+                [],
+                false,
+            ),
+            "getAllGroups" => query_hydrated_all(
+                conn,
+                "SELECT * FROM conversations WHERE type = 'group' ORDER BY active_at DESC",
+                [],
+                false,
             ),
             "getMessageById" => {
                 let id = arg_str(args, 0)?;
-                query_json_column_by_id(conn, "SELECT json FROM messages WHERE id = ?1", id)
+                query_hydrated_one(conn, "SELECT * FROM messages WHERE id = ?1", params![id], true)
             }
             "getMessagesByConversation" => {
                 let conv_id = arg_str(args, 0)?;
                 let limit = args.get(1).and_then(|v| v.as_i64()).unwrap_or(50);
-                let mut stmt = conn.prepare_cached(
-                    "SELECT json FROM messages WHERE conversationId = ?1 ORDER BY received_at DESC LIMIT ?2",
-                )?;
-                let rows = stmt.query_map(params![conv_id, limit], |r| r.get::<_, String>(0))?;
-                collect_json_rows(rows)
+                query_hydrated_all(
+                    conn,
+                    "SELECT * FROM messages WHERE conversationId = ?1 ORDER BY received_at DESC LIMIT ?2",
+                    params![conv_id, limit],
+                    true,
+                )
             }
             "getOlderMessagesByConversation" => {
                 let conv_id = arg_str(args, 0)?;
@@ -161,12 +168,12 @@ impl SqlEngine {
                     .and_then(|v| v.as_i64())
                     .ok_or_else(|| anyhow!("getOlderMessagesByConversation requires received_at timestamp"))?;
                 let limit = args.get(2).and_then(|v| v.as_i64()).unwrap_or(50);
-                let mut stmt = conn.prepare_cached(
-                    "SELECT json FROM messages WHERE conversationId = ?1 AND received_at < ?2 ORDER BY received_at DESC LIMIT ?3",
-                )?;
-                let rows =
-                    stmt.query_map(params![conv_id, before_ts, limit], |r| r.get::<_, String>(0))?;
-                collect_json_rows(rows)
+                query_hydrated_all(
+                    conn,
+                    "SELECT * FROM messages WHERE conversationId = ?1 AND received_at < ?2 ORDER BY received_at DESC LIMIT ?3",
+                    params![conv_id, before_ts, limit],
+                    true,
+                )
             }
             "getNewerMessagesByConversation" => {
                 let conv_id = arg_str(args, 0)?;
@@ -175,23 +182,24 @@ impl SqlEngine {
                     .and_then(|v| v.as_i64())
                     .ok_or_else(|| anyhow!("getNewerMessagesByConversation requires received_at timestamp"))?;
                 let limit = args.get(2).and_then(|v| v.as_i64()).unwrap_or(50);
-                let mut stmt = conn.prepare_cached(
-                    "SELECT json FROM messages WHERE conversationId = ?1 AND received_at > ?2 ORDER BY received_at ASC LIMIT ?3",
-                )?;
-                let rows =
-                    stmt.query_map(params![conv_id, after_ts, limit], |r| r.get::<_, String>(0))?;
-                collect_json_rows(rows)
+                query_hydrated_all(
+                    conn,
+                    "SELECT * FROM messages WHERE conversationId = ?1 AND received_at > ?2 ORDER BY received_at ASC LIMIT ?3",
+                    params![conv_id, after_ts, limit],
+                    true,
+                )
             }
             "getMessagesBySentAt" => {
                 let sent_at = args
                     .first()
                     .and_then(|v| v.as_i64())
                     .ok_or_else(|| anyhow!("getMessagesBySentAt requires sent_at integer"))?;
-                let mut stmt = conn.prepare_cached(
-                    "SELECT json FROM messages WHERE sent_at = ?1 ORDER BY received_at DESC",
-                )?;
-                let rows = stmt.query_map(params![sent_at], |r| r.get::<_, String>(0))?;
-                collect_json_rows(rows)
+                query_hydrated_all(
+                    conn,
+                    "SELECT * FROM messages WHERE sent_at = ?1 ORDER BY received_at DESC",
+                    params![sent_at],
+                    true,
+                )
             }
             "getUnreadCount" => {
                 let conv_id = args.first().and_then(|v| v.as_str());
@@ -214,11 +222,12 @@ impl SqlEngine {
                 let query = arg_str(args, 0)?;
                 let limit = args.get(1).and_then(|v| v.as_i64()).unwrap_or(50);
                 let pattern = format!("%{query}%");
-                let mut stmt = conn.prepare_cached(
-                    "SELECT json FROM messages WHERE body LIKE ?1 ORDER BY received_at DESC LIMIT ?2",
-                )?;
-                let rows = stmt.query_map(params![pattern, limit], |r| r.get::<_, String>(0))?;
-                collect_json_rows(rows)
+                query_hydrated_all(
+                    conn,
+                    "SELECT * FROM messages WHERE body LIKE ?1 ORDER BY received_at DESC LIMIT ?2",
+                    params![pattern, limit],
+                    true,
+                )
             }
             "getMessageCount" => {
                 let count: i64 =
@@ -703,6 +712,124 @@ fn query_json_column_all(conn: &Connection, sql: &str) -> Result<Value> {
     collect_json_rows(rows)
 }
 
+/// Hydrates a single row from `SELECT *`, merging the `json` column (if present)
+/// with every non-null SQL column (e.g. `body`, `type`, `sent_at`, `received_at`,
+/// `name`, `profileName`, `e164`) so Signal Desktop 8.39.0 columnar data renders properly.
+fn hydrate_sql_row(col_names: &[String], row: &rusqlite::Row<'_>) -> Result<Map<String, Value>> {
+    let mut obj = Map::new();
+
+    // First parse the `json` column if present
+    if let Some(json_idx) = col_names.iter().position(|n| n == "json") {
+        if let ValueRef::Text(t) = row.get_ref(json_idx)? {
+            let s = String::from_utf8_lossy(t);
+            if let Ok(Value::Object(parsed)) = serde_json::from_str::<Value>(&s) {
+                obj = parsed;
+            }
+        }
+    }
+
+    // Then overlay authoritative non-null SQL columns
+    for (i, name) in col_names.iter().enumerate() {
+        if name == "json" {
+            continue;
+        }
+        let val = match row.get_ref(i)? {
+            ValueRef::Null => continue,
+            ValueRef::Integer(n) => json!(n),
+            ValueRef::Real(f) => json!(f),
+            ValueRef::Text(t) => Value::String(String::from_utf8_lossy(t).into_owned()),
+            ValueRef::Blob(b) => Value::String(hex::encode(b)),
+        };
+        obj.insert(name.clone(), val);
+    }
+
+    Ok(obj)
+}
+
+fn attach_message_attachments(conn: &Connection, msg_obj: &mut Map<String, Value>) {
+    let has_att = msg_obj
+        .get("hasAttachments")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0)
+        > 0;
+    let already_has = msg_obj
+        .get("attachments")
+        .and_then(|v| v.as_array())
+        .map(|a| !a.is_empty())
+        .unwrap_or(false);
+
+    if !has_att || already_has {
+        return;
+    }
+
+    let Some(msg_id) = msg_obj.get("id").and_then(|v| v.as_str()) else {
+        return;
+    };
+
+    let Ok(mut stmt) = conn.prepare_cached(
+        "SELECT path, contentType, localKey, size, caption FROM message_attachments WHERE messageId = ?1 AND attachmentType = 'attachment' ORDER BY orderInMessage ASC",
+    ) else {
+        return;
+    };
+
+    let Ok(rows) = stmt.query_map(params![msg_id], |r| {
+        Ok(json!({
+            "path": r.get::<_, Option<String>>(0)?,
+            "contentType": r.get::<_, Option<String>>(1)?,
+            "localKey": r.get::<_, Option<String>>(2)?,
+            "size": r.get::<_, Option<i64>>(3)?,
+            "caption": r.get::<_, Option<String>>(4)?,
+        }))
+    }) else {
+        return;
+    };
+
+    let atts: Vec<Value> = rows.filter_map(|r| r.ok()).collect();
+    if !atts.is_empty() {
+        msg_obj.insert("attachments".into(), Value::Array(atts));
+    }
+}
+
+fn query_hydrated_one<P: rusqlite::Params>(
+    conn: &Connection,
+    sql: &str,
+    p: P,
+    is_message: bool,
+) -> Result<Value> {
+    let mut stmt = conn.prepare_cached(sql)?;
+    let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
+    let mut rows = stmt.query(p)?;
+    if let Some(row) = rows.next()? {
+        let mut obj = hydrate_sql_row(&col_names, row)?;
+        if is_message {
+            attach_message_attachments(conn, &mut obj);
+        }
+        Ok(Value::Object(obj))
+    } else {
+        Ok(Value::Null)
+    }
+}
+
+fn query_hydrated_all<P: rusqlite::Params>(
+    conn: &Connection,
+    sql: &str,
+    p: P,
+    is_message: bool,
+) -> Result<Value> {
+    let mut stmt = conn.prepare_cached(sql)?;
+    let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
+    let mut rows = stmt.query(p)?;
+    let mut out = Vec::new();
+    while let Some(row) = rows.next()? {
+        let mut obj = hydrate_sql_row(&col_names, row)?;
+        if is_message {
+            attach_message_attachments(conn, &mut obj);
+        }
+        out.push(Value::Object(obj));
+    }
+    Ok(Value::Array(out))
+}
+
 fn query_raw_rows(conn: &Connection, sql: &str, bind: &[Value]) -> Result<Value> {
     let mut stmt = conn.prepare(sql)?;
     let col_names: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
@@ -963,8 +1090,8 @@ mod tests {
                 r#"
                 PRAGMA user_version = 1350;
                 CREATE TABLE items (id STRING PRIMARY KEY ASC, json TEXT);
-                CREATE TABLE conversations (id STRING PRIMARY KEY ASC, json TEXT, active_at INTEGER, type STRING);
-                CREATE TABLE messages (rowid INTEGER PRIMARY KEY ASC, id STRING UNIQUE, json TEXT, readStatus INTEGER, conversationId STRING, sent_at INTEGER, received_at INTEGER);
+                CREATE TABLE conversations (id STRING PRIMARY KEY ASC, json TEXT, active_at INTEGER, type STRING, name TEXT);
+                CREATE TABLE messages (rowid INTEGER PRIMARY KEY ASC, id STRING UNIQUE, json TEXT, readStatus INTEGER, conversationId STRING, sent_at INTEGER, received_at INTEGER, type STRING, body TEXT);
                 CREATE TABLE sessions (
                     id TEXT NOT NULL PRIMARY KEY,
                     ourServiceId TEXT NOT NULL,
@@ -974,6 +1101,8 @@ mod tests {
                     record BLOB NOT NULL
                 ) STRICT;
                 INSERT INTO items (id, json) VALUES ('deviceName', '{"id":"deviceName","value":"pi4"}');
+                INSERT INTO conversations (id, json, active_at, type, name) VALUES ('c1', '{}', 1000, 'private', 'Alice');
+                INSERT INTO messages (id, json, conversationId, sent_at, received_at, type, body) VALUES ('m1', '{}', 'c1', 1000, 1001, 'incoming', 'Hello real Signal 8.39!');
                 "#,
             )
             .unwrap();
@@ -985,5 +1114,17 @@ mod tests {
             .dispatch_read("getItemById", &[json!("deviceName")])
             .unwrap();
         assert_eq!(item["value"], "pi4");
+
+        // Columnar Signal 8.39.0 conversations and messages must hydrate body/type/name
+        let conv = engine
+            .dispatch_read("getConversationById", &[json!("c1")])
+            .unwrap();
+        assert_eq!(conv["name"], "Alice");
+
+        let msgs = engine
+            .dispatch_read("getMessagesByConversation", &[json!("c1"), json!(10)])
+            .unwrap();
+        assert_eq!(msgs[0]["body"], "Hello real Signal 8.39!");
+        assert_eq!(msgs[0]["type"], "incoming");
     }
 }

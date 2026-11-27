@@ -39,11 +39,11 @@
       "../build/icons/png/256x256.png",
       "../build/icons/png/512x512.png"
     ],
-    "resources": [
-      "../config/default.json",
-      "../config/production.json",
-      "../sidecar/signal-sidecar.mjs"
-    ],
+    "resources": {
+      "../config/default.json": "config/default.json",
+      "../config/production.json": "config/production.json",
+      "../sidecar/signal-sidecar.mjs": "sidecar/signal-sidecar.mjs"
+    },
     "linux": {
       "deb": {
         "depends": [

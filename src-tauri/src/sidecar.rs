@@ -247,7 +247,10 @@ impl SidecarManager {
 pub fn resolve_sidecar_script(resource_dir: Option<&Path>) -> PathBuf {
     let candidates = [
         resource_dir.map(|d| d.join("sidecar").join("signal-sidecar.mjs")),
+        resource_dir.map(|d| d.join("_up_").join("sidecar").join("signal-sidecar.mjs")),
         resource_dir.map(|d| d.join("signal-sidecar.mjs")),
+        Some(PathBuf::from("/usr/lib/Signal/sidecar/signal-sidecar.mjs")),
+        Some(PathBuf::from("/usr/lib/Signal/_up_/sidecar/signal-sidecar.mjs")),
         Some(PathBuf::from("sidecar/signal-sidecar.mjs")),
         Some(PathBuf::from("../sidecar/signal-sidecar.mjs")),
     ];

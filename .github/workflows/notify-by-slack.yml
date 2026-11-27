@@ -2,7 +2,9 @@ name: Notify Slack on Build Finish
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows:
+      - "Build & Release Raspberry Pi 4B Rust/Tauri (.deb)"
+      - "Build & Release Raspberry Pi 4B (.deb)"
     types: [completed]
 
 jobs:
