@@ -57,3 +57,8 @@ __traces__/
 /.zed
 *.sublime*
 *.map
+
+# Rust / Tauri v2 backend
+dist-tauri/
+src-tauri/target/
+

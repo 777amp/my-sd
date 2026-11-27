@@ -1,0 +1,72 @@
+[package]
+name = "signal-desktop-rs"
+version = "8.39.0"
+description = "Signal Desktop Tauri v2 Rust backend optimized for Raspberry Pi 4B (ARM64) & Linux"
+authors = ["Signal Messenger, LLC", "777amp"]
+license = "AGPL-3.0-only"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "signal_desktop_rs_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "signal-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-shell = "2"
+
+# SQLCipher (compatible with Signal Desktop's ~/.config/Signal/sql/db.sqlite)
+rusqlite = { version = "0.32", features = ["bundled-sqlcipher", "serde_json", "backup"] }
+
+# Async runtime & serialization
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+
+# Crypto (Electron safeStorage v10/v11 decryption + Signal attachment AES-256-CBC/HMAC-SHA256)
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+pbkdf2 = "0.12"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+rand = "0.8"
+hex = "0.4"
+base64 = "0.22"
+
+# Filesystem, paths, MIME, URL, logging
+dirs = "5"
+walkdir = "2"
+mime_guess = "2"
+url = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+chrono = { version = "0.4", features = ["serde"] }
+parking_lot = "0.12"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Optional FreeDesktop Secret Service lookup for Electron safeStorage v11 keys
+secret-service = { version = "4", features = ["rt-tokio-crypto-rust"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+# Optimized for Raspberry Pi 4B (ARM64) size and runtime performance
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
