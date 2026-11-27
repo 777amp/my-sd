@@ -28,7 +28,8 @@ const RESOURCES_DICT_PATH = join(
   'optional-resources.json'
 );
 
-const MAX_CACHE_SIZE = 50 * 1024 * 1024;
+const MAX_CACHE_SIZE =
+  process.platform === 'linux' ? 16 * 1024 * 1024 : 50 * 1024 * 1024;
 
 export class OptionalResourceService {
   readonly #resourcesDir: string;

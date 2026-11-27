@@ -123,12 +123,7 @@
     "check:unused-styles:check": "node scripts/check-unused-styles.mjs",
     "update-signal-symbols": "node scripts/update-signal-symbols.mjs",
     "changeset:version": "changeset version && pnpm install --lockfile-only",
-    "changeset:publish": "changeset publish",
-    "tauri:stage": "node scripts/build-tauri-frontend.mjs",
-    "build:rolldown:tauri": "rolldown -c rolldown.tauri.config.ts",
-    "tauri:check": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "tauri:test": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "tauri:build": "node scripts/build-tauri-frontend.mjs && cargo tauri build --bundles deb"
+    "changeset:publish": "changeset publish"
   },
   "optionalDependencies": {
     "fs-xattr": "0.4.0"

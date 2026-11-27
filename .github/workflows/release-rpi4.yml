@@ -137,19 +137,20 @@ jobs:
 
           Built natively on ARM64 for **Raspberry Pi 4B** running **Debian GNU/Linux 13 (Trixie)** (\`arm64\`).
 
-          ### Install (Copy & Paste in Terminal)
+          ### Remove Current Signal & Install Released Package (Copy & Paste in Terminal)
 
           \`\`\`bash
+          sudo apt-get remove -y signal-desktop || true
           curl -fsSL ${DOWNLOAD_URL} -o /tmp/${DEB_NAME} && sudo apt-get update && sudo apt-get install -y /tmp/${DEB_NAME} && rm -f /tmp/${DEB_NAME}
           \`\`\`
 
-          ### Optimizations Included (Maximum Stripped)
-          - **Wayland & X11 Auto-Detection:** \`--ozone-platform-hint=auto\` for Raspberry Pi OS \`labwc\`/Wayfire & X11.
-          - **VideoCore VI GPU Tuning:** GPU rasterization, zero-copy compositing, VA-API GL video decode, and Wayland decorations enabled. *(Escape hatch if needed: run \`SIGNAL_RPI_SW_RENDER=1 signal-desktop\` for software rendering.)*
-          - **Dynamic V8 Memory Cap:** Automatically scales V8 heap (\`--max-old-space-size\` + \`--optimize-for-size\`) for 2 GB / 4 GB / 8 GB Raspberry Pi 4B models, plus \`backgroundThrottling: true\`.
-          - **microSD-Friendly SQLCipher:** WAL \`synchronous=NORMAL\`, \`temp_store=MEMORY\`, 16 MB page cache, 64 MB mmap, and tuned autocheckpoint to eliminate SD card fsync stalls and flash wear.
-          - **Zero Blur / Zero UI Animations:** Strips all GPU-heavy \`backdrop-filter: blur(...)\` effects and disables CSS transitions/animations (0.001ms) for snappy 60fps VideoCore VI rendering.
-          - **Stripped Locales & Native ARM64 Bytecode Cache:** Non-English \`.pak\` and compact locale files pruned; native ARM64 V8 \`preload.bundle.cache\` included for faster cold start.
+          ### Optimizations Included (Raspberry Pi 4B / Debian 13 Trixie)
+          - **Wayland & X11 Auto-Detection:** \`--ozone-platform-hint=auto\` + \`WaylandWindowDecorations\` for Raspberry Pi OS \`labwc\`/Wayfire & X11.
+          - **VideoCore VI GPU Tuning:** GPU rasterization, zero-copy compositing, and OOP canvas rasterization (Intel-only VA-API removed). *(Escape hatch: \`SIGNAL_RPI_SW_RENDER=1 signal-desktop\` for software rendering.)*
+          - **Dynamic V8 Memory Cap & Faster Startup:** Scales V8 heap (\`--max-old-space-size\` + \`--optimize-for-size\`) for 2 GB / 4 GB / 8 GB Pi 4B models, \`backgroundThrottling: true\`, \`v8CacheOptions: 'bypassHeatCheck'\`, and native ARM64 V8 \`preload.bundle.cache\`.
+          - **Async Buffered Logging & microSD-Friendly SQLCipher:** Switched Pino file logger from blocking \`sync: true\` to 16 KB async buffers; WAL \`synchronous=NORMAL\`, \`temp_store=MEMORY\`, 16 MB page cache, 64 MB mmap, and tuned autocheckpoint.
+          - **Aggressive RAM & Rendering Savings:** Capped OptionalResourceService & GIF blob caches (50 MB → 16 MB), reduced Emoji/Sticker/GIF virtual grid overscan, disabled GIF autoplay & forced Signal reduced-motion mode, and stripped \`backdrop-filter: blur(...)\`, non-focus drop shadows, and CSS animations (0.001ms).
+          - **Stripped Locales & Debian 13 Packaging:** Non-English \`.pak\` and compact locale files pruned; \`libasound2 | libasound2t64\` dependency for Debian 13 Trixie.
 
           ### Artifact Info
           - **Package:** \`${DEB_NAME}\` (${DEB_SIZE})

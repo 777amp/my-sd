@@ -350,7 +350,7 @@ export function FunPanelStickers({
     scrollerRef,
     sections,
     columns: STICKER_GRID_COLUMNS,
-    overscan: 8,
+    overscan: 2,
     sectionGap: STICKER_GRID_SECTION_GAP,
     headerSize: STICKER_GRID_HEADER_SIZE,
     rowSize: STICKER_GRID_ROW_SIZE,

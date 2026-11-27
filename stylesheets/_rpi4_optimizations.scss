@@ -1,6 +1,7 @@
-// Raspberry Pi 4B (VideoCore VI) Maximum-Stripped UI Optimizations
-// Eliminates expensive GPU backdrop-filter blurs, transitions, and animations
-// while preserving transitionend/animationend events via 0.001ms durations.
+// Raspberry Pi 4B (VideoCore VI) Aggressive UI Optimizations
+// - Eliminates expensive GPU backdrop-filter blurs
+// - Collapses transitions/animations to 0.001ms (preserves transitionend/animationend)
+// - Strips heavy drop shadows to reduce VideoCore VI overdraw while preserving focus rings
 
 *,
 *::before,
@@ -13,4 +14,8 @@
   animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   scroll-behavior: auto !important;
+}
+
+*:not(:focus):not(:focus-visible):not(:focus-within) {
+  box-shadow: none !important;
 }

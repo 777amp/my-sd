@@ -75,7 +75,7 @@ import { isScrollAtTop } from '../../../hooks/useSizeObserver.dom.tsx';
 
 const log = createLogger('FunPanelGifs');
 
-const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_CACHE_SIZE = 16 * 1024 * 1024; // 16 MB (RPi4)
 const FunGifBlobCache = new LRUCache<string, Blob>({
   maxSize: MAX_CACHE_SIZE,
   sizeCalculation: blob => blob.size,
@@ -357,7 +357,7 @@ export function FunPanelGifs({
     getScrollElement,
     estimateSize,
     rangeExtractor,
-    overscan: 4 * GIF_WATERFALL_COLUMNS,
+    overscan: GIF_WATERFALL_COLUMNS,
     lanes: GIF_WATERFALL_COLUMNS,
     scrollPaddingStart: 20,
     scrollPaddingEnd: 20,

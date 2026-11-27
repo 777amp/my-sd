@@ -228,7 +228,8 @@ export function GIF(props: Props): JSX.Element {
 
           showVisualAttachment();
         }}
-        autoPlay
+        autoPlay={false}
+        preload="metadata"
         playsInline
         muted
         poster={attachment.screenshot && attachment.screenshot.url}

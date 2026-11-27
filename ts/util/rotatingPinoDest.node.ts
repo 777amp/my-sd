@@ -25,9 +25,11 @@ export function createRotatingPinoDest({
   maxSavedLogFiles = DEFAULT_MAX_ROTATIONS,
   interval = DAY,
 }: RotatingPinoDestOptionsType): ReturnType<typeof pino.destination> {
+  const isLinux = process.platform === 'linux';
   const boom = pino.destination({
     dest: logFile,
-    sync: true,
+    sync: !isLinux,
+    ...(isLinux ? { minLength: 16384 } : {}),
     mkdir: true,
   });
 

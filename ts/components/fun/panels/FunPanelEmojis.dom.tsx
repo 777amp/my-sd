@@ -250,7 +250,7 @@ export function FunPanelEmojis({
     scrollerRef,
     sections,
     columns: EMOJI_GRID_COLUMNS,
-    overscan: 8,
+    overscan: 2,
     sectionGap: EMOJI_GRID_SECTION_GAP,
     headerSize: EMOJI_GRID_HEADER_SIZE,
     rowSize: EMOJI_GRID_ROW_SIZE,

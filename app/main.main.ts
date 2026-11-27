@@ -229,6 +229,7 @@ const defaultWebPrefs = {
     !isProduction(app.getVersion()),
   spellcheck: false,
   backgroundThrottling: true,
+  v8CacheOptions: 'bypassHeatCheck' as const,
 };
 
 const DISABLE_IPV6 = process.argv.some(arg => arg === '--disable-ipv6');
@@ -2207,7 +2208,7 @@ async function getDefaultLoginItemSettings(): Promise<Settings> {
   return { args: ['--start-in-tray'] };
 }
 
-// Raspberry Pi 4B (BCM2711 Cortex-A72 / VideoCore VI / Debian Trixie) optimizations
+// Raspberry Pi 4B (BCM2711 Cortex-A72 / VideoCore VI / Debian 13 Trixie) optimizations
 if (process.platform === 'linux' && process.env.GENERATE_PRELOAD_CACHE !== 'on') {
   // Auto-detect Wayland (labwc/Wayfire on Raspberry Pi OS) vs X11
   if (
@@ -2228,7 +2229,6 @@ if (process.platform === 'linux' && process.env.GENERATE_PRELOAD_CACHE !== 'on')
       'enable-features'
     );
     const rpiEnableFeatures = [
-      'VaapiVideoDecodeLinuxGL',
       'CanvasOopRasterization',
       'WaylandWindowDecorations',
       existingEnableFeatures,
@@ -2251,20 +2251,29 @@ if (process.platform === 'linux' && process.env.GENERATE_PRELOAD_CACHE !== 'on')
     .join(' ');
   app.commandLine.appendSwitch('js-flags', v8Flags);
 
-  // Reduce Chromium background CPU & microSD disk cache wear
+  // Reduce Chromium background CPU, RAM & microSD disk cache wear
   app.commandLine.appendSwitch('disable-background-networking');
+  app.commandLine.appendSwitch('disable-breakpad');
   app.commandLine.appendSwitch('disable-component-update');
   app.commandLine.appendSwitch('disable-domain-reliability');
+  app.commandLine.appendSwitch('disable-speech-api');
   app.commandLine.appendSwitch('disable-sync');
   app.commandLine.appendSwitch('metrics-recording-only');
   app.commandLine.appendSwitch('disk-cache-size', String(32 * 1024 * 1024));
+  app.commandLine.appendSwitch('media-cache-size', String(16 * 1024 * 1024));
 }
 
 // Signal doesn't really use media keys so we set this switch here to unblock
 // them so that other apps can use them if they need to.
-const featuresToDisable = `HardwareMediaKeyHandling,${app.commandLine.getSwitchValue(
-  'disable-features'
-)}`;
+const featuresToDisable = [
+  'HardwareMediaKeyHandling',
+  ...(process.platform === 'linux'
+    ? ['MediaRouter', 'CalculateNativeWinOcclusion']
+    : []),
+  app.commandLine.getSwitchValue('disable-features'),
+]
+  .filter(Boolean)
+  .join(',');
 app.commandLine.appendSwitch('disable-features', featuresToDisable);
 
 resolveTranslationsLocale();
