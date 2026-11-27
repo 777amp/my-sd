@@ -600,9 +600,25 @@ fn apply_rpi4_pragmas(conn: &Connection, read_only: bool) -> Result<()> {
     Ok(())
 }
 
-/// Creates minimal core Signal Desktop tables if opening a brand-new database.
-/// On an existing Signal Desktop database, `CREATE TABLE IF NOT EXISTS` is a no-op.
+/// Creates minimal core Signal Desktop tables ONLY when opening a brand-new empty database.
+/// On an existing Signal Desktop database (`user_version > 0` or existing core tables),
+/// we leave the schema untouched so we never conflict with Signal's real schema (e.g.
+/// STRICT `sessions` table without a `number` column).
 fn ensure_core_tables(conn: &Connection) -> Result<()> {
+    let user_version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
+    let existing_core_tables: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('items', 'conversations', 'messages', 'sessions')",
+        [],
+        |r| r.get(0),
+    )?;
+
+    if user_version > 0 || existing_core_tables > 0 {
+        info!(
+            "Detected existing Signal Desktop database (user_version={user_version}, core_tables={existing_core_tables}); skipping bootstrap DDL"
+        );
+        return Ok(());
+    }
+
     conn.execute_batch(
         r#"
         CREATE TABLE IF NOT EXISTS items (
@@ -930,5 +946,44 @@ mod tests {
                 .len(),
             0
         );
+    }
+
+    #[test]
+    fn test_open_existing_signal_desktop_839_schema() {
+        let tmp = TempDir::new().unwrap();
+        let sql_dir = tmp.path().join("sql");
+        fs::create_dir_all(&sql_dir).unwrap();
+        let db_path = sql_dir.join("db.sqlite");
+
+        // Pre-populate a SQLCipher DB matching Signal Desktop 8.39.0's STRICT sessions table
+        {
+            let conn = Connection::open(&db_path).unwrap();
+            conn.pragma_update(None, "key", format!("x'{TEST_KEY}'")).unwrap();
+            conn.execute_batch(
+                r#"
+                PRAGMA user_version = 1350;
+                CREATE TABLE items (id STRING PRIMARY KEY ASC, json TEXT);
+                CREATE TABLE conversations (id STRING PRIMARY KEY ASC, json TEXT, active_at INTEGER, type STRING);
+                CREATE TABLE messages (rowid INTEGER PRIMARY KEY ASC, id STRING UNIQUE, json TEXT, readStatus INTEGER, conversationId STRING, sent_at INTEGER, received_at INTEGER);
+                CREATE TABLE sessions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    ourServiceId TEXT NOT NULL,
+                    serviceId TEXT NOT NULL,
+                    conversationId TEXT NOT NULL,
+                    deviceId INTEGER NOT NULL,
+                    record BLOB NOT NULL
+                ) STRICT;
+                INSERT INTO items (id, json) VALUES ('deviceName', '{"id":"deviceName","value":"pi4"}');
+                "#,
+            )
+            .unwrap();
+        }
+
+        // Opening with SqlEngine must succeed without attempting to create legacy indexes
+        let engine = SqlEngine::open(tmp.path(), TEST_KEY).unwrap();
+        let item = engine
+            .dispatch_read("getItemById", &[json!("deviceName")])
+            .unwrap();
+        assert_eq!(item["value"], "pi4");
     }
 }
