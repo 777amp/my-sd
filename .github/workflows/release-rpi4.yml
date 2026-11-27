@@ -59,7 +59,7 @@ jobs:
           node -p "'app_version=' + require('./package.json').version" >> "$GITHUB_OUTPUT"
 
       - name: Cache electron-gyp and electron-builder
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.electron-gyp
