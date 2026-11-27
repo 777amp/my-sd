@@ -557,6 +557,12 @@
       "appimage": "1.0.3"
     },
     "deb": {
+      "fpm": [
+        "--conflicts",
+        "signal",
+        "--replaces",
+        "signal"
+      ],
       "depends": [
         "libnotify4",
         "libxtst6",
