@@ -28,8 +28,8 @@ export function createRotatingPinoDest({
   const isLinux = process.platform === 'linux';
   const boom = pino.destination({
     dest: logFile,
-    sync: !isLinux,
-    ...(isLinux ? { minLength: 8192 } : {}),
+    sync: true,
+    ...(isLinux ? { minLength: 8192, periodicFlush: 5000 } : {}),
     mkdir: true,
   });
 
