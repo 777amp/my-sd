@@ -4,6 +4,7 @@
 import { ipcRenderer } from 'electron';
 import { serialize, deserialize } from 'node:v8';
 import { createLogger } from '../logging/log.std.ts';
+import { isTauriRuntime, tauriIpcRenderer } from '../shims/tauriBridge.dom.ts';
 import { runTaskWithTimeout } from '../textsecure/TaskWithTimeout.std.ts';
 import { explodePromise } from '../util/explodePromise.std.ts';
 import { missingCaseError } from '../util/missingCaseError.std.ts';
@@ -46,6 +47,18 @@ export async function ipcInvoke<T>(
   activeJobCount += 1;
   return runTaskWithTimeout(async () => {
     try {
+      if (isTauriRuntime()) {
+        const result = await tauriIpcRenderer.invoke<{
+          ok: boolean;
+          value?: T;
+          error?: string;
+        }>(channel, name, args);
+        if (!result.ok) {
+          throw new Error(result.error || `SQL call failed: ${name}`);
+        }
+        return result.value as T;
+      }
+
       const result = await ipcRenderer.invoke(channel, name, serialize(args));
       if (!result.ok) {
         throw result.error;

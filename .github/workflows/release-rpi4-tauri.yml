@@ -1,0 +1,71 @@
+name: Build & Release Raspberry Pi 4B Rust/Tauri (.deb)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*-rust*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-tauri-arm64:
+    name: Build Tauri v2 ARM64 .deb for Raspberry Pi 4B (Debian 13 Trixie)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Tauri v2 & SQLCipher Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libsecret-1-dev \
+            pkg-config \
+            patchelf \
+            build-essential \
+            dpkg
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Setup Node.js and pnpm
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e
+        with:
+          cache: true
+          save-cache: true
+          install: false
+
+      - name: Install JS dependencies & generate frontend assets
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run generate
+          node scripts/build-tauri-frontend.mjs
+
+      - name: Run Rust unit & integration tests
+        working-directory: src-tauri
+        run: cargo test --locked
+
+      - name: Build Tauri v2 ARM64 .deb bundle
+        run: |
+          cargo install tauri-cli --version "^2" --locked
+          cargo tauri build --bundles deb
+
+      - name: Upload ARM64 .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signal-desktop-rust-arm64-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
