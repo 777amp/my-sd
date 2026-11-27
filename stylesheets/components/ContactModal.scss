@@ -1,0 +1,271 @@
+// Copyright 2021 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use '../mixins';
+@use '../variables';
+
+.ContactModal {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--axo-color-label-primary);
+
+  &__name {
+    @include mixins.button-reset();
+    & {
+      @include mixins.font-title-1;
+      font-weight: 400;
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      max-width: 100%;
+
+      margin-top: 12px;
+      cursor: pointer;
+    }
+  }
+
+  &__name__text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__name__chevron {
+    flex-shrink: 0;
+
+    display: inline-block;
+    height: 20px;
+    width: 20px;
+
+    // Align with the text
+    position: relative;
+    inset-block-start: 2px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/chevron/chevron-right-bold.svg',
+        variables.$color-gray-90
+      );
+    }
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/chevron/chevron-right-bold.svg',
+        variables.$color-gray-05
+      );
+    }
+  }
+
+  &__member-label {
+    @include mixins.button-reset;
+    @include mixins.button-focus-outline;
+
+    & {
+      // Note: matches the border radius in ContactName.scss, for --label-pill
+      border-radius: 9px;
+
+      margin-top: 6px;
+      margin-bottom: 4px;
+
+      max-width: 100%;
+    }
+  }
+
+  &__button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  &__button {
+    @include mixins.button-reset;
+    & {
+      display: flex;
+      align-items: center;
+      padding-block: 6px;
+      width: 100%;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:hover {
+      background-color: variables.$color-gray-02;
+
+      @include mixins.dark-theme {
+        background-color: variables.$color-gray-80;
+      }
+    }
+
+    &:focus-visible {
+      @include mixins.light-theme {
+        background-color: variables.$color-gray-02;
+      }
+
+      @include mixins.dark-theme {
+        background-color: variables.$color-gray-80;
+      }
+    }
+
+    &[disabled] {
+      opacity: 0.5;
+    }
+  }
+
+  &__bubble-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-inline-end: 12px;
+    width: 20px;
+  }
+
+  &__nickname__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/edit/edit.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/edit/edit.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__safety-number__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/safety_number/safety_number.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/safety_number/safety_number.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__block__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/block/block.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/block/block.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__make-admin__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/key/key.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/key/key.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__add-to-another-group__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/plus/plus-circle.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/plus/plus-circle.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__remove-from-group__bubble-icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+
+    @include mixins.light-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/leave/leave.svg',
+        variables.$color-gray-75
+      );
+    }
+
+    @include mixins.dark-theme {
+      @include mixins.color-svg(
+        '../images/icons/v3/leave/leave.svg',
+        variables.$color-gray-15
+      );
+    }
+  }
+
+  &__quick-actions {
+    margin-block: 16px;
+  }
+
+  &__divider {
+    width: 100%;
+
+    border-style: solid;
+    border-bottom: none;
+    border-width: 1px;
+
+    @include mixins.light-theme {
+      border-color: variables.$color-gray-15;
+    }
+
+    @include mixins.dark-theme {
+      border-color: variables.$color-gray-75;
+    }
+
+    & {
+      margin-block: 8px 5px;
+    }
+  }
+}

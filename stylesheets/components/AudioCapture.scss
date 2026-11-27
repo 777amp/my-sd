@@ -1,0 +1,15 @@
+// Copyright 2016 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use 'sass:color';
+@use '../mixins';
+@use '../variables';
+
+.AudioCapture {
+  display: flex;
+  text-align: center;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  background: none;
+}

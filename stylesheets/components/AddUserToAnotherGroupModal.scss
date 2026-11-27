@@ -1,0 +1,10 @@
+// Copyright 2022 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+.AddUserToAnotherGroupModal .module-conversation-list {
+  &__item--contact-or-conversation {
+    height: 52px;
+    padding-block: 0;
+    padding-inline: 6px;
+  }
+}

@@ -1,0 +1,166 @@
+name: Build & Release Raspberry Pi 4B (.deb)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-rpi4-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: Build ARM64 .deb for Raspberry Pi 4B (Debian 13 Trixie)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system build & headless dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb \
+            libpulse0 \
+            libnss3 \
+            libgtk-3-0 \
+            libgbm1 \
+            libasound2t64 \
+            libxtst6 \
+            libxss1 \
+            libx11-xcb1 \
+            libnotify4 \
+            build-essential \
+            python3 \
+            fakeroot \
+            dpkg
+
+      - name: Setup Node.js and pnpm (from devEngines)
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          cache: true
+          save-cache: true
+          install: false
+
+      - name: Read Electron and electron-builder versions
+        id: versions
+        run: |
+          node -p "'electron=' + (require('./package.json').devDependencies?.electron ?? '')" >> "$GITHUB_OUTPUT"
+          node -p "'electron_builder=' + (require('./package.json').devDependencies?.['electron-builder'] ?? '')" >> "$GITHUB_OUTPUT"
+          node -p "'app_version=' + require('./package.json').version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache electron-gyp and electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.electron-gyp
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: rpi4-electron-${{ steps.versions.outputs.electron }}-${{ steps.versions.outputs.electron_builder }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            rpi4-electron-${{ steps.versions.outputs.electron }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          # Native modules are rebuilt for Electron in postinstall's electron:install-app-deps
+          npm_config_node_gyp: echo
+
+      - name: Generate assets, bundles, and styles
+        run: pnpm run generate
+
+      - name: Generate native ARM64 V8 preload bytecode cache
+        run: xvfb-run --auto-servernum pnpm run build:preload-cache
+        env:
+          ARTIFACTS_DIR: artifacts/linux
+
+      - name: Configure Linux ARM64 .deb target
+        run: pnpm run prepare-linux-build deb arm64
+
+      - name: Build Raspberry Pi 4B .deb package
+        run: pnpm run build:release --publish=never
+        env:
+          SIGNAL_ENV: production
+
+      - name: Prepare release metadata and checksum
+        id: release_meta
+        run: |
+          DEB_PATH=$(ls -1 release/*.deb | head -n 1)
+          if [ -z "$DEB_PATH" ] || [ ! -f "$DEB_PATH" ]; then
+            echo "ERROR: No .deb artifact found in release/"
+            ls -la release/ || true
+            exit 1
+          fi
+
+          DEB_NAME=$(basename "$DEB_PATH")
+          DEB_SIZE=$(du -h "$DEB_PATH" | awk '{print $1}')
+          SHA256=$(sha256sum "$DEB_PATH" | awk '{print $1}')
+          (cd release && sha256sum "$DEB_NAME" > "${DEB_NAME}.sha256")
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="v${{ steps.versions.outputs.app_version }}-rpi4-${{ github.run_number }}"
+          fi
+
+          {
+            echo "deb_path=${DEB_PATH}"
+            echo "deb_name=${DEB_NAME}"
+            echo "deb_size=${DEB_SIZE}"
+            echo "sha256=${SHA256}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release with install terminal line
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release_meta.outputs.tag }}
+          DEB_PATH: ${{ steps.release_meta.outputs.deb_path }}
+          DEB_NAME: ${{ steps.release_meta.outputs.deb_name }}
+          DEB_SIZE: ${{ steps.release_meta.outputs.deb_size }}
+          SHA256: ${{ steps.release_meta.outputs.sha256 }}
+          APP_VERSION: ${{ steps.versions.outputs.app_version }}
+        run: |
+          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${DEB_NAME}"
+
+          cat <<EOF > release-notes.md
+          ## Signal Desktop ${APP_VERSION} — Raspberry Pi 4B Ultra-Optimized (\`arm64\`)
+
+          Built natively on ARM64 for **Raspberry Pi 4B** running **Debian GNU/Linux 13 (Trixie)** (\`arm64\`).
+
+          ### Install (Copy & Paste in Terminal)
+
+          \`\`\`bash
+          curl -fsSL ${DOWNLOAD_URL} -o /tmp/${DEB_NAME} && sudo apt-get update && sudo apt-get install -y /tmp/${DEB_NAME} && rm -f /tmp/${DEB_NAME}
+          \`\`\`
+
+          ### Optimizations Included (Maximum Stripped)
+          - **Wayland & X11 Auto-Detection:** \`--ozone-platform-hint=auto\` for Raspberry Pi OS \`labwc\`/Wayfire & X11.
+          - **VideoCore VI GPU Tuning:** GPU rasterization, zero-copy compositing, VA-API GL video decode, and Wayland decorations enabled. *(Escape hatch if needed: run \`SIGNAL_RPI_SW_RENDER=1 signal-desktop\` for software rendering.)*
+          - **Dynamic V8 Memory Cap:** Automatically scales V8 heap (\`--max-old-space-size\` + \`--optimize-for-size\`) for 2 GB / 4 GB / 8 GB Raspberry Pi 4B models, plus \`backgroundThrottling: true\`.
+          - **microSD-Friendly SQLCipher:** WAL \`synchronous=NORMAL\`, \`temp_store=MEMORY\`, 16 MB page cache, 64 MB mmap, and tuned autocheckpoint to eliminate SD card fsync stalls and flash wear.
+          - **Zero Blur / Zero UI Animations:** Strips all GPU-heavy \`backdrop-filter: blur(...)\` effects and disables CSS transitions/animations (0.001ms) for snappy 60fps VideoCore VI rendering.
+          - **Stripped Locales & Native ARM64 Bytecode Cache:** Non-English \`.pak\` and compact locale files pruned; native ARM64 V8 \`preload.bundle.cache\` included for faster cold start.
+
+          ### Artifact Info
+          - **Package:** \`${DEB_NAME}\` (${DEB_SIZE})
+          - **SHA-256:** \`${SHA256}\`
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DEB_PATH" "release/${DEB_NAME}.sha256" --clobber
+            gh release edit "$TAG" --title "Signal Desktop ${APP_VERSION} (Raspberry Pi 4B arm64)" --notes-file release-notes.md
+          else
+            gh release create "$TAG" "$DEB_PATH" "release/${DEB_NAME}.sha256" \
+              --title "Signal Desktop ${APP_VERSION} (Raspberry Pi 4B arm64)" \
+              --notes-file release-notes.md
+          fi

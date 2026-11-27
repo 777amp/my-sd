@@ -1,0 +1,15 @@
+// Copyright 2021 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use '../mixins';
+@use '../variables';
+
+.module-ContactSpoofingReviewDialog {
+  &__buttons {
+    margin-top: 4px;
+
+    .module-Button:not(:last-child) {
+      margin-inline-end: 12px;
+    }
+  }
+}

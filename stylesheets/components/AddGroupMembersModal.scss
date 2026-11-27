@@ -1,0 +1,25 @@
+// Copyright 2021 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+.module-AddGroupMembersModal {
+  .module-ContactPills {
+    max-height: 50px;
+  }
+
+  &__list-wrapper {
+    flex-grow: 1;
+    overflow: hidden;
+  }
+
+  &__no-candidate-contacts {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .module-conversation-list {
+    // remove horizontal padding so ListTiles extend to the edges
+    padding: 0;
+  }
+}

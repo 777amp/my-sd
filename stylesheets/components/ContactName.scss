@@ -1,0 +1,117 @@
+// Copyright 2021 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use 'sass:map';
+@use 'sass:color';
+
+@use '../variables';
+@use '../mixins';
+
+:where(button).module-contact-name {
+  @include mixins.button-reset;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: auto;
+    text-decoration: none;
+  }
+}
+
+.module-contact-name {
+  color: light-dark(
+    var(--contact-name-color-light),
+    var(--contact-name-color-dark)
+  );
+
+  &--label-pill {
+    @include mixins.font-body-small;
+    // Because of the font-size, it will be height=18px
+    border-radius: 9px;
+
+    font-weight: 400;
+    display: inline-block;
+    padding-inline: 6px;
+    padding-block: 1px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  &--label-pill--inner {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  &--label-pill--contact-modal &--label-pill--inner {
+    @include mixins.font-body-1;
+    // Because of font size, it will be height=22px
+    border-radius: 11px;
+
+    align-items: start;
+    white-space: normal;
+  }
+
+  &--label-pill--bubble {
+    margin-inline-start: 2px;
+    margin-bottom: -4px;
+    max-width: calc(100% - 2px);
+  }
+
+  &--label-pill--emoji {
+    display: inline-block;
+    padding-block: 2px;
+    padding-inline-end: 3px;
+    line-height: 12px;
+  }
+
+  &--label-pill--quote {
+    margin-top: 1px;
+    @include mixins.font-body-small;
+
+    color: variables.$color-gray-90;
+    background-color: variables.$color-white-alpha-36;
+    @include mixins.dark-theme() {
+      color: variables.$color-gray-05;
+      background-color: variables.$color-white-alpha-20;
+    }
+  }
+
+  &--label-pill--contact-modal {
+    margin-bottom: -5px;
+  }
+
+  &--label-pill--text {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &--label-pill--bubble {
+    color: color-mix(in srgb, var(--contact-name-color-light) 70%, black);
+    background-color: rgb(from var(--contact-name-color-light) r g b / 14%);
+    @include mixins.dark-theme() {
+      color: color-mix(in srgb, var(--contact-name-color-dark) 68%, white);
+      background-color: rgb(from var(--contact-name-color-dark) r g b / 32%);
+    }
+  }
+
+  &--label-pill--list,
+  &--label-pill--contact-modal {
+    color: color-mix(in srgb, var(--contact-name-color-light), black 70%);
+    background-color: rgb(from var(--contact-name-color-light) r g b/ 10%);
+    @include mixins.dark-theme() {
+      color: color-mix(in srgb, var(--contact-name-color-dark), white 75%);
+      background-color: rgb(from var(--contact-name-color-dark) r g b / 32%);
+    }
+  }
+}

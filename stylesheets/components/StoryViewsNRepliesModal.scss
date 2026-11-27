@@ -1,0 +1,212 @@
+// Copyright 2022 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use '../mixins';
+@use '../variables';
+
+.StoryViewsNRepliesModal {
+  .module-Modal {
+    min-width: 320px;
+    max-height: 80vh;
+  }
+
+  &--group {
+    .module-Modal {
+      min-height: min(400px, 80vh);
+    }
+
+    .StoryViewsNRepliesModal__content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+  }
+
+  .module-Modal__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .module-Modal__body_inner {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  &__content {
+    &:not(:has(.Tabs)) {
+      padding-block-start: 16px;
+    }
+
+    // When picking from full emoji set, compensate for for hidden quick picker
+    &:has(.module-emoji-picker)::before {
+      content: '';
+      display: block;
+      height: 52px;
+    }
+
+    padding-block-end: 16px;
+    padding-inline: 16px;
+  }
+
+  &__replies {
+    flex: 1;
+    margin-block: 0;
+    margin-inline: -16px;
+
+    &--none {
+      align-items: center;
+      color: variables.$color-gray-45;
+      display: flex;
+      flex: 1;
+      justify-content: center;
+      padding-block: 80px;
+      padding-inline: 0;
+    }
+  }
+
+  .module-modal-host__overlay-container {
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  &__compose-container {
+    display: flex;
+    align-items: center;
+  }
+
+  &__composer {
+    flex: 1;
+    margin-top: 6px;
+  }
+
+  &__not-a-member {
+    margin-block: 24px 8px;
+    margin-inline: 4px;
+    font-size: 12px;
+    text-align: center;
+    color: variables.$color-gray-25;
+  }
+
+  &__input {
+    &.module-composition-input__input {
+      // For specificity because StoryViewsNRepliesModal is always in dark-theme
+      @include mixins.dark-theme {
+        background: variables.$color-gray-75;
+        border: 1px solid variables.$color-gray-75;
+        color: variables.$color-white;
+      }
+
+      .ql-editor.ql-blank::before {
+        color: variables.$color-gray-25;
+      }
+
+      display: flex;
+      align-items: center;
+      min-height: 36px;
+
+      .quill {
+        flex: 1;
+      }
+    }
+
+    .module-composition-input__input--with-children {
+      flex: 1;
+    }
+  }
+
+  &__view {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-block: 8px;
+    margin-inline: 0;
+
+    &--name {
+      @include mixins.font-body-2;
+      margin-inline-start: 12px;
+    }
+
+    &--timestamp {
+      @include mixins.font-body-2;
+      color: variables.$color-gray-45;
+    }
+  }
+
+  &__reply {
+    align-items: flex-end;
+    display: flex;
+    padding-bottom: 12px;
+
+    &--title {
+      @include mixins.font-body-2;
+    }
+
+    &--timestamp {
+      @include mixins.font-subtitle;
+      color: variables.$color-gray-25;
+      margin-inline-start: 6px;
+    }
+  }
+
+  &__reaction {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding-block: 12px;
+    padding-inline: 16px;
+
+    &--container {
+      display: flex;
+    }
+
+    &--body {
+      margin-inline-start: 20px;
+    }
+  }
+
+  &__read-receipts-off {
+    color: variables.$color-gray-25;
+    margin-block: 160px;
+    margin-inline: 16px;
+  }
+
+  .module-ReactionPickerPicker {
+    background: inherit;
+    border: none;
+    box-shadow: none;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .module-emoji-picker {
+    position: absolute;
+    bottom: 55px;
+    max-height: calc(100vh - 100px);
+  }
+}
+
+.Tabs.StoryViewsNRepliesModal__tabs {
+  position: sticky;
+  top: 0;
+  z-index: variables.$z-index-base;
+  padding-block: 16px;
+  background: variables.$color-gray-80;
+  border-bottom: none;
+  justify-content: center;
+}
+
+.StoryViewsNRepliesModal__tabs .Tabs__tab {
+  @include mixins.font-body-1-bold;
+  padding-block: 4px;
+  padding-inline: 12px;
+  margin-block: 0;
+  margin-inline: 12px;
+}
+
+.StoryViewsNRepliesModal__tabs .Tabs__tab--selected {
+  background: variables.$color-gray-65;
+  border-radius: 24px;
+  border-bottom: none;
+}

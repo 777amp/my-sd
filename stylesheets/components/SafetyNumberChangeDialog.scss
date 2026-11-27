@@ -1,0 +1,92 @@
+// Copyright 2021 Signal Messenger, LLC
+// SPDX-License-Identifier: AGPL-3.0-only
+
+@use '../mixins';
+@use '../variables';
+
+.module-SafetyNumberChangeDialog {
+  // Used to ensure that a set of spans reverse order under RTL
+  &__rtl-span {
+    display: inline-block;
+  }
+
+  &__contacts {
+    list-style-type: none;
+    padding: 0px;
+    margin-block-end: 0px;
+    color: var(--axo-color-label-primary);
+  }
+
+  &__row {
+    $row: &;
+
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 16px;
+
+    &__story-name {
+      @include mixins.font-body-1-bold;
+      flex-grow: 1;
+      margin-inline-end: auto;
+    }
+
+    &--wrapper {
+      flex-grow: 1;
+      margin-inline-start: 12px;
+    }
+
+    &--name {
+      @include mixins.font-body-1;
+
+      @include mixins.dark-theme {
+        color: variables.$color-white;
+      }
+    }
+
+    &--subtitle {
+      @include mixins.font-subtitle;
+
+      @include mixins.light-theme {
+        color: variables.$color-gray-60;
+      }
+
+      @include mixins.dark-theme {
+        color: variables.$color-gray-25;
+      }
+    }
+
+    &__view {
+      @include mixins.button-reset;
+      @include mixins.button-secondary-blue-text;
+
+      & {
+        opacity: 0;
+        transition: opacity 150ms cubic-bezier(0.17, 0.17, 0, 1);
+      }
+
+      #{$row}:hover &,
+      #{$row}:is(:focus-visible, :has(:focus-visible)) & {
+        opacity: 1;
+      }
+
+      & {
+        border-radius: 4px;
+        padding-block: 8px;
+        padding-inline: 14px;
+      }
+    }
+
+    &__chevron {
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 150ms cubic-bezier(0.17, 0.17, 0, 1);
+
+      #{$row}:hover &,
+      #{$row}:is(:focus-visible, :has(:focus-visible)) &,
+      &:has([data-axo-dropdownmenu-state='open']) {
+        opacity: 1;
+      }
+    }
+  }
+}

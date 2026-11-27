@@ -1,0 +1,78 @@
+diff --git a/dist/fabric.js b/dist/fabric.js
+index 86536ce..846c34e 100644
+--- a/dist/fabric.js
++++ b/dist/fabric.js
+@@ -19,23 +19,6 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+   }
+   fabric.window = window;
+ }
+-else {
+-  // assume we're running under node.js when document/window are not present
+-  var jsdom = require('jsdom');
+-  var virtualWindow = new jsdom.JSDOM(
+-    decodeURIComponent('%3C!DOCTYPE%20html%3E%3Chtml%3E%3Chead%3E%3C%2Fhead%3E%3Cbody%3E%3C%2Fbody%3E%3C%2Fhtml%3E'),
+-    {
+-      features: {
+-        FetchExternalResources: ['img']
+-      },
+-      resources: 'usable'
+-    }).window;
+-  fabric.document = virtualWindow.document;
+-  fabric.jsdomImplForWrapper = require('jsdom/lib/jsdom/living/generated/utils').implForWrapper;
+-  fabric.nodeCanvas = require('jsdom/lib/jsdom/utils').Canvas;
+-  fabric.window = virtualWindow;
+-  DOMParser = fabric.window.DOMParser;
+-}
+ 
+ /**
+  * True when in environment that supports touch events
+@@ -3306,16 +3289,7 @@ fabric.CommonMethods = {
+   }
+ 
+   (function () {
+-    var style = fabric.document.documentElement.style,
+-        selectProp = 'userSelect' in style
+-          ? 'userSelect'
+-          : 'MozUserSelect' in style
+-            ? 'MozUserSelect'
+-            : 'WebkitUserSelect' in style
+-              ? 'WebkitUserSelect'
+-              : 'KhtmlUserSelect' in style
+-                ? 'KhtmlUserSelect'
+-                : '';
++    var selectProp = 'userSelect';
+ 
+     /**
+      * Makes element unselectable
+@@ -7857,6 +7831,7 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
+      * @return {String} SVG representation of an gradient (linear/radial)
+      */
+     toSVG: function(object, options) {
++      throw new Error('fabric SVG export is disabled (GHSA-w22m-hvvm-xmwx, GHSA-hfvx-25r5-qc3w)');
+       var coords = clone(this.coords, true), i, len, options = options || {},
+           markup, commonAttributes, colorStops = clone(this.colorStops, true),
+           needsSwap = coords.r1 > coords.r2,
+@@ -8247,6 +8222,7 @@ fabric.ElementsParser = function(elements, callback, options, reviver, parsingOp
+      * @return {String} SVG representation of a pattern
+      */
+     toSVG: function(object) {
++      throw new Error('fabric SVG export is disabled (GHSA-w22m-hvvm-xmwx, GHSA-hfvx-25r5-qc3w)');
+       var patternSource = typeof this.source === 'function' ? this.source() : this.source,
+           patternWidth = patternSource.width / object.width,
+           patternHeight = patternSource.height / object.height,
+@@ -17296,6 +17272,7 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
+      * @private
+      */
+     _createBaseClipPathSVGMarkup: function(objectMarkup, options) {
++      throw new Error('fabric SVG export is disabled (GHSA-w22m-hvvm-xmwx, GHSA-hfvx-25r5-qc3w)');
+       options = options || {};
+       var reviver = options.reviver,
+           additionalTransform = options.additionalTransform || '',
+@@ -17313,6 +17290,7 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
+      * @private
+      */
+     _createBaseSVGMarkup: function(objectMarkup, options) {
++      throw new Error('fabric SVG export is disabled (GHSA-w22m-hvvm-xmwx, GHSA-hfvx-25r5-qc3w)');
+       options = options || {};
+       var noStyle = options.noStyle,
+           reviver = options.reviver,
